@@ -1,0 +1,40 @@
+pipeline{
+    agent {
+        label 'master'
+    }
+
+    parameters {
+        choice(name: 'browser', choices: ['chrome', 'no_gui', 'chrome_remote','firefox_remote'], description: 'Running type')
+
+    }
+
+    stages{
+        stage('自动测试程序源码同步') {
+            steps {
+                sh 'mkdir -p SaaS_UI'
+                dir("SaaS_UI"){
+                    git branch:'master', url:'git@git.growingio.cn:wangxin/great-web-ui.git'
+                }
+            }
+        }
+
+        stage('运行自动化测试') {
+            steps {
+                sh '''
+                    . ~/.zshrc
+                    cd SaaS_UI
+                    #更新python依赖库
+                    pip3 install -r requirements.txt
+                    #运行自动化测试
+                    pytest -sv saas/testcase/test_saas_ma.py
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            emailext body: '$DEFAULT_CONTENT', recipientProviders: [[$class: 'RequesterRecipientProvider']], subject: '$DEFAULT_SUBJECT'
+        }
+    }
+}
